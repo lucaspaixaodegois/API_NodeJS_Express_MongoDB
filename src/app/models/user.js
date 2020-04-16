@@ -1,4 +1,4 @@
-const mongoose = require('../database/index');//importando o mongoose
+const mongoose = require('../../database/index');//importando o mongoose
 const bcrypt = require('bcryptjs')
 //defindo  o esquema/tabela/entidade e seus campos e tipos.
 const UserSchema = new mongoose.Schema({

@@ -3,7 +3,7 @@ const User = require('../models/user'); // importando  model User
 const bcrypt = require('bcryptjs') //importando bcrypt para descriptar melhor para comparar a senha passada e a salva no banco
 const jwt = require('jsonwebtoken');//importando o jsonwebtoken gerador de token
 const router = require("express").Router();//atribuindo a  variabel router  com os metodos da função/classe Router().
-const authConfig = require('../config/auth');//importando o secrety
+const authConfig = require('../../config/auth');//importando o secrety
 
 //funcao  gerador de token e já retorna o token
 function generateToken(params = {}) {
