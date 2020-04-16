@@ -9,8 +9,10 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "express": "^4.17.1",
+    "fs": "^0.0.1-security",
     "jsonwebtoken": "^8.5.1",
-    "mongoose": "^5.9.9"
+    "mongoose": "^5.9.9",
+    "path": "^0.12.7"
   },
   "devDependencies": {
     "nodemon": "^2.0.3"

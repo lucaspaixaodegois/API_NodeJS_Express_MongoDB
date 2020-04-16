@@ -30,7 +30,7 @@
 5- add o mongoose
         #yarn add mongoose //pacote que faz o node conectar com mongoDB
 
-6- criar pasta database cria arquivo index.js de configuracao deconexao do mongoDB
+6- criar pasta database cria arquivo index.js de configuração deconexao do mongoDB
   
     6.1 dentro do arquivo:
 
@@ -77,7 +77,7 @@
 
         module.exports = User; //exportando o modelo user
 
-8- Criar pasta controller com arquivo authController // logica da autenticacao e rotas
+8- Criar pasta controller com arquivo authController // logica da autenticação e rotas
 
     8.1 dentro do arquivo:
 
@@ -211,7 +211,7 @@
         //depois criar o token com cogigo abaixo:
         const token = jwt.sign({ id: user.id });//para entrar gerando token com dois parametros um é o id do user que nunca se repete e  o outro é uma Hash que precisa ser algo unico que nem mesmo outra app tenha igual logo uma hash.
 
-    15.2 criar pasta config com arquivo dentro chamado auth.js vai guardar as configuracao de segurança
+    15.2 criar pasta config com arquivo dentro chamado auth.js vai guardar as configuração de segurança
         //usei um gerador de Hash md5 online para criar o meu "secret" e ficou assim:
             //Your Hash: 84f40ca99553e2ea3ec247d06d80cbb8
             // Your String: help-ti2020
@@ -227,10 +227,11 @@
 
         response.send({ user, token });//passando ouser e token
 
-17-Após criar um novo usuario o app  já deve ser aberto sem precisar passar na tela de login novamente para isso acontecer. vo criar uma função generateToken
+17-Após criar um novo usuario o app  já deve ser aberto sem precisar passar na tela de login novamente para isso acontecer. 
 
+        17.1 dentro do arquivo  authController criar uma função generateToken
 
-        //funcao  gerador de token e já retorna o token
+        //função  gerador de token e já retorna o token
         function generateToken(params = {}) {
           return jwt.sign(params, authConfig.secret, { expiresIn: 86400 });
 
@@ -241,9 +242,83 @@
 
       18.1 Os middlewares são funções que podem tratar os inputs e outputs das rotas antes e ou depois que uma rota é processada, ou seja, você pode criar um middleware que intercepta e verificar se uma requisição esta enviando um header específico e que caso o mesmo não esteja enviando o header ela retorne uma tela de erro para o usuário, negando a requisição de acessar uma determinada rota da aplicação, neste caso você criou e inejtou um middleware que trata uma pré-requisição.
 
-19- Criar pasta middleware com um arquivo auth.js  dentro
+19- Criar pasta middleware com um arquivo auth.js  dentro vai ficar a logica do middleware
+      
       19.1 dentro do arquivo:
 
-      module.exports(request,response,next)=>{
-        const authHeader=request.headers.autorization;
-      }
+          const jwt = require('jsonwebtoken');//importando o jsonwebtoken
+          const authConfig = require('../../config/auth');//importando o secrety
+
+          module.exports = (request, response, next) => {
+
+            const authHeader = request.headers.authorization;//pegando valor passado no header
+
+            //verificando se tem um token no cabeçalho da requisição
+            if (!authHeader)
+              return response.status(401).send({
+                error: 'Token não foi informado!'
+              });
+
+            //verificando se o token está no formato certo, no caso ele começã com uma palavra "Bearer" e seguido de algum hash.
+            const parts = authHeader.split(' ');//separar o token em partes
+
+            if (parts.length !== 2) { //verificando se foi dividido em apenas 2 partes se foi mais ou menos 
+              return response.status(401).send({ error: 'Erro no Token ' }); //informa que há um erro no token
+            }
+
+            const [scheme, token] = parts;// recebe as partes do token para fazer comparação
+
+            if (!/^Bearer$/i.test(scheme)) {//verificando se a primeria parte contem a palavra bearer, usando expressao regular;
+              return response.status(401).send({ error: 'Token mal formado' }) //caso não encotre da mensagem detoken mal formado.
+            }
+            //OBS: feito esse tando de verificação para evitar processamento desnecessario, após esses "filtros" vamos comparar de fato o token  carregado.
+
+            //usando o metodo verify do jwt , passamos o token recebido + nosso secret
+            jwt.verify(token, authConfig.secret, (err, decoded) => {// recebe um callback ou seja  se o token for direfente do authConfig.secret entra no if err
+              if (err) return response.status(401).send({ erro: 'Token invalido' }); // se tiver erro mensagem de erro
+              //caso contrario a variavel decoded  tem a informção do user id
+              request.userId = decoded.id;//passando o userId para serusado em outroslugares
+              return next();  //proxima a ação que importar esse middleware no caso o projectController
+
+            });
+          };
+20- Dentro da pasta conreollers criar um arquivo index.js que fará a importação de todos controles de uma vez, evitando que façamos uma importação por vez.
+
+    20.1 mas antes  vamos add 2  modulos  o fs e o path
+      #yarn add fs path // o fs  nos permite trabalhar com file systen do node, carregar arquivo por exemplo. Já o path é para trabalhar com caminhos de pastas
+
+
+    20.2 dentro do arquivo:
+
+          const fs = require('fs');//imporntado o modulo fs que nós permite trabalhar com file systen do node
+          const path = require('path');//importando o modulo path nós permite trabalhar com caminhos de pastas
+
+          module.exports = app => { //receber o app
+            fs
+              .readdirSync(__dirname) //ler um diretorio (no caso esse mesmo que estamos operando no index.js)
+              .filter(file => ((file.indexOf('.')) !== 0 && (file !== "index.js"))) //filtar arquivos que não comecem com ponto"." que geralmente são arquivos de config, e que tbm  que não seja o arquivo index.js no  caso esse arquivo.
+              //resumindo vai procurar um arquivo que nao comece com . e que nao seja esse index.js, ou seja, todos os outros controles.
+              .forEach(file => require(path.resolve(__dirname, file))(app));//pecorrendo esses arquivos setando require app em cada um deles, pq em cada um é esperado um app
+          }
+
+
+    20.3 atualar o index.js principal com o code a seguir : 
+
+            
+          const express = require('express')
+          const bodyParser = require('body-parser');
+
+          const app = express();
+
+          app.use(bodyParser.json()); //informando que será usado json nas requisições
+          app.use(bodyParser.urlencoded({ extended: false }));//para entender que as urls
+
+          /*  Na forma tradicional ... repassando o app para todos os controles um a um, é necessario passar pois, só deve ter um app rodando.
+              require('./controllers/authController')(app);
+              require('./controllers/projectController')(app);
+          
+              Mas achei outra forma de otimizar isso e importando apenas uma vez aqui no index principal.
+              */
+          require('./app/controllers/index')(app);  //comentario lá
+
+          app.listen(3000);//setando porta que vamos usar.
