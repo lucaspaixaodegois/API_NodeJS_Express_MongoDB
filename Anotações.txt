@@ -1,0 +1,249 @@
+
+1- iniciar o projeto 
+        # yarn init -y //ja cria o package.json
+
+2- add o express
+        #yarn add express //vai nos ajudar nas rotas
+
+3- add o body-parser
+       #yarn add body-parser // esse pacote faz com que o node entenda as requisições em json e tambem as urls  que teram parametros
+
+4-criar pasta src, arquivo index.js 
+
+    4.1 dentro do arquivo:
+
+        const express = require('express')
+        const bodyParser = require('body-parser');
+
+        const app = express();
+
+        app.use(bodyParser.json()); //informando que será usado json nas requisições
+        app.use(bodyParser.urlencoded({ extended: false }));//para entender que as urls
+
+        //request são os dados da requisição ex:parametros,token. Já o response é o que contém uma respota que será enviada ao usuário.
+        app.get('/', (request, response) => {
+          response.send("ok!");
+        });
+
+        app.listen(3000);//setando porta que vamos usar.
+
+5- add o mongoose
+        #yarn add mongoose //pacote que faz o node conectar com mongoDB
+
+6- criar pasta database cria arquivo index.js de configuracao deconexao do mongoDB
+  
+    6.1 dentro do arquivo:
+
+        const express = require('express');//importando o express
+        const mongoose = require('mongoose');//importando o mongoose para conexão com banco 
+
+        //passsando o  endereço/login/senha para acessar o banco na nuvem.
+        mongoose.connect('mongodb+srv://root:root@cluster-tcc-whzqw.mongodb.net/apiDB?retryWrites=true&w=majority', {
+          useNewUrlParser: true, useUnifiedTopology: true
+
+        });
+        mongoose.Promise = global.Promise;
+        module.exports = mongoose;
+
+7- criar pasta model com arquivo user.js 
+
+    7.1 dentro do arquivo:
+
+        const mongoose = require('../database/index');//importando o mongoose
+        //defindo  o esquema/tabela/entidade e seus campos e tipos.
+        const UserSchema = new mongoose.Schema({
+          name: {
+            type: String,
+            require: true,
+          },
+          email: {
+            type: String,
+            unique: true,
+            required: true,
+            lowercase: true,
+          },
+          password: {
+            type: String,
+            required: true,
+            select: false, //para que a senha não seja passada quando o usuario for buscado no banco
+          },
+          createdAt: {
+            type: Date,
+            default: Date.now, //Data em que o registro foi criado.
+          },
+        });
+        //defindo o model User no banco com mongoose
+        const User = mongoose.model('User', UserSchema);
+
+        module.exports = User; //exportando o modelo user
+
+8- Criar pasta controller com arquivo authController // logica da autenticacao e rotas
+
+    8.1 dentro do arquivo:
+
+        const express = require('express'); //importando o express
+        const User = require('../models/user'); // importando  model User
+
+        const router = require("express").Router();//atribuindo a  variabel router  com os metodos da função/classe Router().
+
+        //definindo rotas para o model User
+        router.post('/register', async (request, response) => {
+          try {
+            //criar um novo usuario
+            const user = await User.create(request.body);
+
+            return response.send({ user }); //printa o user criado
+          } catch (err) {
+            //caso de algo errado
+            return response.status(400).send({ error: 'Erro ao criar registro' });
+          }
+        });
+
+        //repassando o router com prefixo /auth
+        module.exports = (app) => app.use('/auth', router);
+
+9- Testar usando o insomnia  o metodo post passando no corpo da requisição o json a seguir
+
+    9.1 dentro do insomnia com a url: http://localhost:3000/auth/register
+       // cole o json e clique em send:
+        {
+          "name":"Gois",
+          "email":"gois@gmail.com",
+          "password":"gois321"
+        }
+        // é para ter um resultado como esse caso tenha sucesso:
+        {
+          "user": {
+            "_id": "5e979edff631023b08f7336e",
+            "name": "Gois",
+            "email": "gois@gmail.com",
+            "password": "gois321",
+            "createdAt": "2020-04-15T23:55:11.716Z",
+            "__v": 0
+          }
+        }
+        //caso contrario, tiver algo errado  teremos isso:
+        {
+          "error": "Erro ao criar registro"
+        }
+
+10- add o express
+        #yarn add bcrypt //biblioteca que vamos usar para Criptografar
+
+11- Criptografar a senha antes de salvar no banco
+
+    11.1  no model user   importamos o bcrypt e criamos um função que gera Hash
+          dentro do arquivo adicionamos o seguinte cogigo:
+
+          //.pre é  uma função do mongoose que executa algo antes de "no caso salvar"
+          UserSchema.pre('save', async function (next) {
+            //o this aqui refere-se ao obj que está sendo salvado, sendo assim vou usar para pegar o password , n rounds
+            const hash = await bcrypt.hash(this.password, 10);
+            this.password = hash;
+
+            next();
+
+12- add verificação de email/usuario já cadastrado e limpando o password
+    12.1 no authController dentro do try add esse if:
+
+          //verificar se o email já está cadastrado
+          if (await User.findOne({ email })) {
+            return response.status(400).send({ error: 'Usuário já cadastrado' });
+          }
+
+          //setando/apagando o password 
+           user.password = undefined;
+
+
+13- Testar no insomnia a verificação 
+
+    13.1  // cole o json e clique em send:
+        {
+          "name":"Pedro",
+          "email":"pedro@gmail.com",
+          "password":"pedros321"
+        }
+        // é para ter um resultado como esse caso tenha sucesso:
+        {
+          "user": {
+            "_id": "5e979edff6341412341023b08f7336e",
+            "name": "Pedro",
+            "email": "gopedro@gmail.com",
+            "password": "pedros321",
+            "createdAt": "2020-04-15T23:35:11.716Z",
+            "__v": 0
+          }
+        }
+        //caso contrario, tiver algo errado  teremos isso:
+        {
+          error: 'Usuário já cadastrado' 
+
+        }
+
+14-adicionar  a rota post authenticate dentro do arquivo authController
+
+        //add rota /authenticate  que fará a verificação  de acesso do usúario
+        router.post('/authenticate', async (request, response) => {
+
+          const { email, password } = request.body;//pegando email e senha da requisição
+
+          const user = await User.findOne({ email }).select('+password');//verificando se existe o usuario cadastrado pegando o email e o password
+
+          //se usuario nao existe mdua status para 400 e emite mensagem de nao encontrado
+          if (!user)
+            return response.status(400).send({ error: 'Usuário não encontrado!' });
+
+          //verificando se a senha/password que ele passou é realmente a mesma que está salva no banco
+          if (!await bcrypt.compare(password, user.password))
+            return response.status(400).send({ error: 'Senha incorreta!' });
+
+          //removendo o password
+          user.password = undefined;
+          response.send({ user });
+        });
+
+15- add o jsonwebtoken // usando a tecnica jwt para autenticação 
+    # yarn add jsonwebtoken //pacote ofical do node para jwt
+
+    15.1 importar o jsonwebtoken chamado de jwt dentro do authController
+        const jwt = require('jsonwebtoken');
+        
+        //depois criar o token com cogigo abaixo:
+        const token = jwt.sign({ id: user.id });//para entrar gerando token com dois parametros um é o id do user que nunca se repete e  o outro é uma Hash que precisa ser algo unico que nem mesmo outra app tenha igual logo uma hash.
+
+    15.2 criar pasta config com arquivo dentro chamado auth.js vai guardar as configuracao de segurança
+        //usei um gerador de Hash md5 online para criar o meu "secret" e ficou assim:
+            //Your Hash: 84f40ca99553e2ea3ec247d06d80cbb8
+            // Your String: help-ti2020
+        {
+          "secret":"84f40ca99553e2ea3ec247d06d80cbb8"
+        }
+
+16- Após  Hash criada ,tenho que importar dentro do authController e passar como parametros do token
+
+        const authConfig =required('../config/auth');//importando o secret
+        //gerando token
+        const token = jwt.sign({ id: user.id }, authConfig.secret, { expiresIn: 86400 });// gerando token com dois parametros sendo um  o id_user que nunca se repete e o outro é uma hash que precisa ser algo unico que nem mesmo outra app tenha igual para isso usei um gerador de hash md5 online e o ultimo paramento é o tempo de validade do token queno caso 86400 vale 24h.
+
+        response.send({ user, token });//passando ouser e token
+
+17-Após criar um novo usuario o app  já deve ser aberto sem precisar passar na tela de login novamente para isso acontecer. vo criar uma função generateToken
+
+
+        //funcao  gerador de token e já retorna o token
+        function generateToken(params = {}) {
+          return jwt.sign(params, authConfig.secret, { expiresIn: 86400 });
+
+          // const token = jwt.sign({ id: user.id }, authConfig.secret, { expiresIn: 86400 });// gerando token com dois parametros sendo um  o id_user que nunca se repete e o outro é uma hash que precisa ser algo unico que nem mesmo outra app tenha igual para isso usei um gerador de hash md5 online e o ultimo paramento é o tempo de validade do token queno caso 86400 vale 24h.
+        }
+
+18-quero que uma determinada pagina  carregue  se estiver logado, ou seja, privar rota para user cadastrados. No express isso é chamado de Middleware.
+
+      18.1 Os middlewares são funções que podem tratar os inputs e outputs das rotas antes e ou depois que uma rota é processada, ou seja, você pode criar um middleware que intercepta e verificar se uma requisição esta enviando um header específico e que caso o mesmo não esteja enviando o header ela retorne uma tela de erro para o usuário, negando a requisição de acessar uma determinada rota da aplicação, neste caso você criou e inejtou um middleware que trata uma pré-requisição.
+
+19- Criar pasta middleware com um arquivo auth.js  dentro
+      19.1 dentro do arquivo:
+
+      module.exports(request,response,next)=>{
+        const authHeader=request.headers.autorization;
+      }
