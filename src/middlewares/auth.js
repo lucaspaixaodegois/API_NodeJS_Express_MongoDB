@@ -4,9 +4,9 @@ const authConfig = require('../config/auth.json')
 module.exports = (request, response, next) => {
 
 
-  const authHeader = request.headers.autorization;
-
-
+  const authHeader = request.headers.authorization;//pegando valor passado no header
+  
+  
   //verificando se tem um token no cabeçalho da requisição
   if (!authHeader)
     return response.status(401).send({
@@ -15,10 +15,10 @@ module.exports = (request, response, next) => {
 
   //verificando se o token está no formato certo, no caso ele começã com uma palavra "Bearer" e seguido de algum hash.
   const parts = authHeader.split(' ');//separar o token em partes
+  
 
-
-  if (!parts.length === 2) { //verificando se foi dividido em apenas 2 partes se foi mais ou menos 
-    return response.status(401).send({ error: 'Erro no Token ' }); //informa que o token é invalido
+  if (parts.length !== 2) { //verificando se foi dividido em apenas 2 partes se foi mais ou menos 
+    return response.status(401).send({ error: 'Erro no Token ' }); //informa que há um erro no token
   }
 
 
@@ -26,7 +26,7 @@ module.exports = (request, response, next) => {
 
 
   if (!/^Bearer$/i.test(scheme)) {//verificando se a primeria parte contem a palavra bearer, usando expressao regular;
-    return res.status(401).send({ error: 'Token mal formado' }) //caso não encotre da mensagem detoken mal formado.
+        return response.status(401).send({ error: 'Token mal formado' }) //caso não encotre da mensagem detoken mal formado.
   }
   //OBS: feito esse tando de verificação para evitar processamento desnecessario, após esses "filtros" vamos comparar de fato o token  carregado.
 
