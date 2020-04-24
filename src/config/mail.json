@@ -1,0 +1,8 @@
+{
+  "rejectUnauthorized": "true",
+  "service": "gmail",
+  "host": "smtp.gmail.com",
+  "port": 587,
+  "user": "helpti.app@gmail.com",
+  "pass": "helpti@2020"
+}

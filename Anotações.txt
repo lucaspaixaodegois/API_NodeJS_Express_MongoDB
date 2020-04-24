@@ -322,3 +322,73 @@
           require('./app/controllers/index')(app);  //comentario lá
 
           app.listen(3000);//setando porta que vamos usar.
+
+
+21- add modulo nodemailer // configuar o envio de email
+    
+         #yarn add nodemailer //comando para add modulo
+  
+    21.1 Sobre o nodemailer:
+          
+          É um módulo Nodejs devidamente testado que permite o envio de emails a partir de uma aplicação node. O projecto existe desde 2010 e hoje é uma opção padrão na comunidade para envio de emails. Foi inicialmente desenvolvido pelo Andris Reinman.
+
+    21.2 Criar uma pasta modulos e criar um arquivo para add configuração do email:
+
+    21.3 Dentro do arquivo :
+          const nodemailer = require('nodemailer');
+
+          const { host, port, user, pass } = require('../config/mail.json')
+
+          const transport = nodemailer.createTransport({
+            host, 
+            port,
+            auth: { user, pass },
+
+          });
+
+          module.exports = transport;
+
+
+
+    21.4 criar arquivo mail.json dentro da pasta config a qual vai guarda as informações de login, porta,senha,host
+    
+    21.5 Dentro do arquivo mail.json:
+
+          {
+            "host": " 'smtp.gmail.com",
+            "port": 587,
+            "user": "helpti.app@gmail.com",
+            "pass": "helpti@2020"
+          }
+
+22-add modulo templeta de email com o comando:
+    #yarn add nodemailer-express-handlebars // que nos permite montar um template usando texto e variavel, mesmo sendo em html dentro do node.
+
+
+23- criar pasta resources  com outra pasta dentro com nome email onde vai ficar os  emails
+
+    23.1 ainda dentro do arquivo mailer.js adicionar configuração do hbs caminho dos  emails:
+
+
+        //configurando o hbs
+          transport.use('compile', hbs({
+          viewEngine: 'handlebars',//por padrão definir a viewEngine como handlebars 
+          viewPath: path.resolve('./src/resource/mail/'),//onde vão ficar as views de template dos emails,OBS: indicar o caminho partindo da raiz do projeto
+          extName: '.html',//nome da extensão que será usada
+        }));
+
+24-Agora no controllers/authController.js , vamos adicionar a rota de esqueci minha senha  
+
+  24.1- Dentro do arquivo:
+
+  
+25- No user model add os campos/propriedades tokenRest e data de expiracao
+
+    25.1 Dentro do arquivo:
+
+       passwordResetExpires: {//propriedade/campo que vai aguarda o prazo de validade do token
+      type: Date,
+      select: false,//para que a senha não seja passada quando for buscado  um usuario ou uma lista deusuarios no banco
+    },
+
+26- 
