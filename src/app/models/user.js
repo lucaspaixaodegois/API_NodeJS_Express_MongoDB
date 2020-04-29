@@ -47,7 +47,7 @@ UserSchema.pre('save', async function (next) {//.pre é  uma função do mongoos
 
 });
 
-//defindo o model User no banco com mongoose
+//definindo o model User no banco com mongoose
 const User = mongoose.model('User', UserSchema);
 
 module.exports = User; //exportando o modelo user
