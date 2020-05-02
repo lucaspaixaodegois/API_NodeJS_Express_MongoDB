@@ -2,19 +2,20 @@ const express = require('express');//importando o express
 const authMiddleware = require('../middlewares/auth');//importando o middlewares
 const router = express.Router();//importando os metodos do Router() para router
 const Project = require('../models/project');//importando o model project
-const Task = ('../models/task');//importando o model task
+const Task = require('../models/task');//importando o model task
 router.use(authMiddleware);//definindo o uso authMiddleware antes de carregar a rota /projects
 
 //rota listar todos
 router.get('/', async (request, response) => {  //rota para lsitar todos os projetos
 
   try {
+    //buscnado todos os projetos 
     const projects = await Project.find().populate(['user', 'tasks']);
 
-    return response.send({ projects });
+    return response.send({ projects });  // retorna os projetos salvos no bd
 
-  } catch (err) {
-    console.log(err)
+  } catch (err) {//caso de algo errado emitir mensagem
+    console.log(err) //exibir o erro no console
     return response.status(400).send({ error: 'Erro ao carregar os projetos.' });
   }
 });
@@ -24,11 +25,11 @@ router.get('/:projectId', async (request, response) => { //metodo get para lista
   try {
     const project = await Project.findById(request.params.projectId).populate(['user', 'tasks']);//eager loading é basicamente 2 querry 1 para todos os projects e outra faz uma buscar em todos os usuarios de uma vez para u mproject x
 
-    return response.send({ project });
+    return response.send({ project });//retornando o projeto que tenha o id passado 
 
-  } catch (err) {
-    console.log(err)
-    return response.status(400).send({ error: 'Erro ao carregar os projetos por id.' });
+  } catch (err) {//caso de algo errado emitir mensagem
+    console.log(err) //exibir o erro no console
+    return response.status(400).send({ error: 'Erro ao carregar o projeto do id passado.' });
   }
 });
 
@@ -52,8 +53,8 @@ router.post('/', async (request, response) => {
     return response.send({ project });
 
 
-  } catch (err) {
-    console.log(err)
+  } catch (err) {//caso de algo errado emitir mensagem
+    console.log(err) //exibir o erro no console
     return response.status(400).send({ error: 'Erro ao criar um novo projeto' });
   }
 });
@@ -62,12 +63,12 @@ router.post('/', async (request, response) => {
 //Alterar por id 
 router.put('/:projectId', async (request, response) => {
   try {
-    const { title, description, tasks } = request.body;
-
-    const project = await Project.findByIdAndUpdate(request.params.projectId, {
+    const { title, description, tasks } = request.body; //pegando do corpo da requisicao os dados title, description, tasks
+    //localiza o primeiro documento que corresponde a um dado filter, aplica um updatee retorna o documento.  
+    const project = await Project.findOneAndUpdate(request.params.projectId, {
       title,
       description
-    }, { new: true });
+    }, { new: true });//definindo a new : true para retornar o documento após a update aplicação.
 
     project.tasks = [];
     await Task.remove({ project: project._id });
@@ -75,26 +76,28 @@ router.put('/:projectId', async (request, response) => {
     await Promise.all(tasks.map(async task => {
       const projectTask = new Task({ ...task, project: project._id });
 
-      await projectTask.save();
+      await projectTask.save();//salvandoo
 
-      project.tasks.push(projectTask);
+      project.tasks.push(projectTask);//enviando alteracao
     }));
 
-    await project.save();
+    await project.save();//salvando o project
 
-    return response.send({ project });
-  } catch (err) {
-    return response.status(400).send({ error: 'Error updating project' });
+    return response.send({ project });//retornado o project alterado
+  } catch (err) {//caso de algo errado emitir mensagem
+    console.log(err) //exibir o erro no console
+    return response.status(400).send({ error: 'Erro ao atualizar o projeto.' });
   }
 });
 
 //Deletar por id 
 router.delete('/:projectId', async (request, response) => { //rota para apagar um projeto passando o id
   try {
-    await Project.findByIdAndRemove(request.params.projectId).populate('user');
+
+    await Project.findOneAndDelete(request.params.projectId).populate('user');
     return response.send('Project apagado com sucesso.');
-  } catch (err) {
-    console.log(err)
+  } catch (err) {//caso de algo errado emitir mensagem
+    console.log(err) //exibir o erro no console
     return response.status(400).send({ error: 'Erro ao deletar o projeto.' });
   }
 });

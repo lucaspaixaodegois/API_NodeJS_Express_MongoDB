@@ -16,7 +16,7 @@ const ProjectSchema = new mongoose.Schema({
   user: { //criando "relacionamento" 1 para 1 
     type: mongoose.Schema.Types.ObjectId, //tipo id gerado pelo mongo para o obj
     ref: 'User',//referenciando a tabela atrelada
-    // required: true, // obrigatoriedade de vinculo, que um project tem um user
+    required: true, // obrigatoriedade de vinculo, que um project tem um user
   },
   //como um project pode ter n taferancas deve ser colocado entro do array []
   tasks: [{
